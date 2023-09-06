@@ -1,0 +1,119 @@
+cabal-version:      3.0
+name:               groth
+version:            0.1.0.0
+synopsis:           Exploring CIP 68
+stability:          experimental
+
+-- A longer description of the package.
+-- description:
+
+-- A URL where users can report bugs.
+-- bug-reports:
+
+license:        Apache-2.0
+license-files:  LICENSE
+author:         Antonio Hernández-Garduño, Agustín Salinas Hernandez, Juan Salvador Magán Valero
+maintainer:     antoniohg@me.com
+                    
+-- A copyright notice.
+copyright:      Reitcircles
+category:       Blockchain
+-- extra-source-files: CHANGELOG.md
+
+flag defer-plugin-errors
+    description:
+        Defer errors from the plugin, useful for things like Haddock that can't handle it.
+    default: False
+    manual: True
+
+common lang
+    default-language:   Haskell2010
+    ghc-options:
+      -Wall -Wnoncanonical-monad-instances
+      -Wincomplete-uni-patterns -Wincomplete-record-updates
+      -Wredundant-constraints -Widentities -rtsopts
+      -- See Plutus Tx readme
+      -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+    if flag(defer-plugin-errors)
+        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+
+-- executable write-preminting-policy
+--     main-is: Main.hs
+--     hs-source-dirs: app
+--     default-language: Haskell2010
+--     build-depends:
+--       base >= 4.9 && < 5,
+--       aeson,
+--       bytestring,
+--       plutus-ledger-api,
+--       plutus-ledger,
+--       groth
+
+library
+    import: lang
+    
+    exposed-modules:
+        BLS6_6.Params,
+        BLS6_6.ZKPVerification,
+        BLS6_6.Test,
+        BN128.Params,
+        BN128.ZKPVerification,
+        BN128.Test,  
+        BN128.ParseDatum, 
+        Deploy, 
+        Auxiliary
+
+    build-depends:
+      base >= 4.9 && < 5,
+      aeson -any,
+      bytestring -any,
+      containers -any,
+      freer-extras -any,
+      plutus-ledger -any,
+      plutus-ledger-api -any,
+      --plutus-ledger-constraints -any,
+      plutus-tx -any,
+      plutus-tx-plugin -any,
+      plutus-script-utils -any,
+      text -any,
+      lens -any,
+      cardano-api, 
+      cardano-binary,
+      --additionals:
+      serialise -any,
+      --base16-bytestring,
+      --data-default,
+      --openapi3,
+      hex-text,
+      utilities
+    hs-source-dirs: 
+        src, 
+
+test-suite groth-validator-test
+    import:            lang
+    type:              exitcode-stdio-1.0
+    main-is:           Spec.hs
+    hs-source-dirs:    test
+    other-modules:
+                        Spec.BLS6_6.ZKPValidator
+    build-depends:
+        base,
+        groth,
+        text,
+        data-default,
+        containers,
+
+        cardano-ledger-babbage,
+        cardano-ledger-alonzo,
+        cardano-ledger-core,
+        cardano-api,
+
+        plutus-contract,
+        cardano-node-emulator,
+        freer-extras,
+        aeson,
+        plutus-tx,
+        plutus-ledger-api,
+        plutus-script-utils,
+        plutus-ledger,
+        plutus-tx-constraints
