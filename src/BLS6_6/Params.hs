@@ -1,8 +1,9 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module BLS6_6.Params where
 
-import PlutusTx.Prelude
+import           PlutusTx.Prelude
 
 
 -----------------------------------------------------------------------
@@ -24,16 +25,16 @@ q0 = 43
 
 ----- PAIRING GROUP ORDER -----
 
-r_EC   :: Integer     -- Group order
-r_EC  = 13
+rEC   :: Integer     -- Group order
+rEC  = 13
 
 bitsR  :: [Integer]   -- Binary representation of r_EC
 bitsR = [1, 0, 1, 1]
 
 -- Even/Odd sign of group order
 
-r_sign :: Integer  -- (-1)^r_EC
-r_sign = -1
+rSign :: Integer  -- (-1)^r_EC
+rSign = -1
 
 
 ----- IRREDUCIBLE POLYNOMIAL -----

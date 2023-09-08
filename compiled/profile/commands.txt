@@ -1,0 +1,23 @@
+# Combine data wrapper an script
+
+uplc apply BLS6_6.ZKPVerification.uplc-1.flat  BLS6_6.ZKPVerification.uplc-0.flat --if flat-namedDeBruijn --of textual -o script.textual
+uplc apply BLS6_6.ZKPVerification.uplc-1.flat  BLS6_6.ZKPVerification.uplc-0.flat --if flat-namedDeBruijn --of flat-namedDeBruijn -o script.flat
+
+# Get the applied script to a datum, redeemer and ScriptContext
+
+uplc apply-to-data script.textual datum-3fp.flat unit.flat script-context.flat --if textual -o applied.textual
+
+uplc apply-to-data script.flat datum-3fp.flat unit.flat script-context.flat --if flat-namedDeBruijn --of flat-namedDeBruijn -o applied.flat
+
+# Generate logs
+
+uplc evaluate -i applied.textual --if textual --trace-mode LogsWithBudgets -o logs
+
+uplc evaluate -i applied.flat --if flat-namedDeBruijn --trace-mode LogsWithBudgets -o logs
+
+# Profile graph
+
+  # quitar unas lineas que dan error
+sed '/^decoded/d' logs > logs.new && mv logs.new logs 
+
+cat logs | traceToStacks | flamegraph.pl > cpu.svg

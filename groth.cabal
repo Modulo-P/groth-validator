@@ -102,6 +102,8 @@ test-suite groth-validator-test
         text,
         data-default,
         containers,
+        flat,
+        bytestring,
 
         cardano-ledger-babbage,
         cardano-ledger-alonzo,
@@ -113,6 +115,7 @@ test-suite groth-validator-test
         freer-extras,
         aeson,
         plutus-tx,
+        plutus-core,
         plutus-ledger-api,
         plutus-script-utils,
         plutus-ledger,
