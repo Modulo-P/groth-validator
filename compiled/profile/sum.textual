@@ -1,0 +1,28 @@
+(program
+  1.0.0
+  [
+    [
+      (lam
+        a_0
+        (lam
+          b_1
+          [
+            [
+              [ (force (builtin trace)) (con string "entering plutusSum") ]
+              (lam
+                thunk_2
+                [
+                  [ (force (builtin trace)) (con string "exiting plutusSum") ]
+                  [ [ (builtin addInteger) a_0 ] b_1 ]
+                ]
+              )
+            ]
+            (con unit ())
+          ]
+        )
+      )
+      (con data (I 1))
+    ]
+    (con data (I 1))
+  ]
+)

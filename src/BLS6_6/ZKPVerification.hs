@@ -20,10 +20,12 @@
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:conservative-optimisation #-}
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:defer-errors #-}
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:dump-uplc #-}
+{-# LANGUAGE AllowAmbiguousTypes        #-}
 
 module BLS6_6.ZKPVerification where
 
-import           PlutusTx
+import           PlutusTx                             (compile,
+                                                       unstableMakeIsData)
 import           PlutusTx.Builtins                    (modInteger)
 import           PlutusTx.Prelude
 import           Prelude                              (Show)
@@ -37,6 +39,9 @@ import qualified Ledger.Typed.Scripts                 as PlutusV2
 
 import           GHC.Generics                         (Generic)
 import qualified Plutus.Script.Utils.V2.Typed.Scripts as V2
+import           Plutus.V2.Ledger.Api                 (UnsafeFromData,
+                                                       unsafeFromBuiltinData)
+import qualified PlutusTx                             as PlutusTx.Code
 
 -----------------------------------------------------------------------
 -----------------------------   Algebra   -----------------------------
@@ -482,3 +487,10 @@ typedGrothValidator = V2.mkTypedValidator @TypedGroth
 
 grothValidator :: PlutusV2.Validator
 grothValidator = PlutusV2.validatorScript typedGrothValidator
+
+{-# INLINABLE plutusSum #-}
+plutusSum :: Integer -> Integer -> Integer
+plutusSum a b = a + b
+
+compiledSum :: PlutusTx.Code.CompiledCode (BuiltinData -> BuiltinData -> Integer)
+compiledSum = $$(PlutusTx.compile [|| \x y -> plutusSum (unsafeFromBuiltinData x) (unsafeFromBuiltinData y) ||])

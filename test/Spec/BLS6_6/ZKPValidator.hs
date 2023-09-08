@@ -71,7 +71,7 @@ import           Plutus.V2.Ledger.Api            (PubKeyHash (..),
                                                   always, toData)
 import           Plutus.V2.Ledger.Contexts       (TxOut)
 import           Plutus.V2.Ledger.Tx             (OutputDatum (..))
-import           PlutusCore.Data                 (Data)
+import           PlutusCore.Data                 (Data (I))
 import           PlutusTx.AssocMap               (empty)
 import           PlutusTx.Maybe                  (Maybe (..))
 import           PlutusTx.Prelude                (fmap, mempty)
@@ -197,3 +197,7 @@ mkValue = assetClassValue (assetClass adaSymbol adaToken)
 writeScriptContextAsFlat :: IO ()
 writeScriptContextAsFlat = do
   BSL.writeFile "compiled/profile/script-context.flat" (flat (toData (mkScriptContext 1)))
+
+writeOneAsFlat :: IO ()
+writeOneAsFlat = do
+  BSL.writeFile "compiled/profile/one.flat" (flat (PlutusCore.Data.I 1))
