@@ -14,33 +14,34 @@
 {-# LANGUAGE DerivingStrategies         #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
+{-# LANGUAGE InstanceSigs               #-}
 {-# LANGUAGE StrictData                 #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 -- {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:profile-all #-}
 -- {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:conservative-optimisation #-}
 -- {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:defer-errors #-}
 -- {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:dump-uplc #-}
--- {-# LANGUAGE AllowAmbiguousTypes        #-}
+{-# LANGUAGE AllowAmbiguousTypes        #-}
 
-module BLS6_6.ZKPVerification where
+module BLS6_6_V1.ZKPVerification where
 
+import           Cardano.Prelude                      (Show)
 import           PlutusTx                             (compile,
                                                        unstableMakeIsData)
 import           PlutusTx.Builtins                    (modInteger)
 import           PlutusTx.Prelude
-import           Prelude                              (Show)
 
 import qualified Plutus.V2.Ledger.Api                 as PlutusV2
 
-import           BLS6_6.Params
+import           BLS6_6_V1.Params
 import           Data.Aeson                           (FromJSON, ToJSON)
 
 import qualified Ledger.Typed.Scripts                 as PlutusV2
 
 import           GHC.Generics                         (Generic)
 import qualified Plutus.Script.Utils.V2.Typed.Scripts as V2
-import           Plutus.V2.Ledger.Api                 (unsafeFromBuiltinData)
-import qualified PlutusTx                             as PlutusTx.Code
+import           PlutusUtils                          (showIntegerBuiltinString)
 
 -----------------------------------------------------------------------
 -----------------------------   Algebra   -----------------------------
@@ -126,7 +127,6 @@ inverse_I !n = if mod0 n == 0
 -- | The "polynomials"
 newtype Poly = Poly [Integer]
   deriving stock (Show, Generic)
-  deriving newtype (Eq)
   deriving anyclass (ToJSON, FromJSON)
 
 instance AdditiveSemigroup Poly where
@@ -146,6 +146,15 @@ instance MultiplicativeSemigroup Poly where
 
 instance MultiplicativeMonoid Poly where
   one = Poly $ [1] <> replicate k0 0
+
+instance Eq Poly where
+  (==) (Poly !ps) (Poly !qs) = and $ zipWith (===) ps qs
+
+{-# INLINABLE polyToBultinString #-}
+polyToBultinString :: Poly -> BuiltinString
+polyToBultinString (Poly !ps) = appendString (appendString "[ " coeff) "]"
+  where
+      coeff = foldr (\c acc -> appendString (appendString (showIntegerBuiltinString c) ",") acc) emptyString ps
 
 -- | "fit" adjusts 'poly' to a list of length 'k0 + 1'
 fit :: Poly -> Poly
@@ -167,11 +176,12 @@ degree (Poly !ps) = if mod0 (last ps) == 0
 -- polynomials
 instance EuclideanRing Poly where
   {-# INLINABLE divModE #-}
-  divModE n@(Poly !ns) !d = go (d, zero, n)
+  divModE :: Poly -> Poly -> (Poly, Poly)
+  divModE n@(Poly ns) d = go (d, zero, n)
     where
       len = length ns
       go :: (Poly, Poly, Poly) -> (Poly, Poly)
-      go (d@(Poly !ds), !q, r@(Poly !rs))
+      go (d@(Poly !ds), q, r@(Poly !rs))
         | deg_r == 0 && mod0 (head rs) == 0 = (q, zero)
         | deg_r < deg_d         = (q, r)
         | otherwise                             = let
@@ -179,7 +189,7 @@ instance EuclideanRing Poly where
                !r2 = rs !! deg_r
                !d2 = ds !! deg_d
                !t2 = [r2 \* inverse_I d2]
-               !t3 = replicate (len - deg_r + deg_d - 1) 0
+               !t3 = replicate (len - deg_r + deg_d) 0
                !t  = Poly $ t1 <> t2 <> t3
             in
                go (d, q + t, r - t * d)
@@ -187,6 +197,8 @@ instance EuclideanRing Poly where
           !deg_d = degree d
           !deg_r = degree r
 
+
+  mod :: Poly -> Poly -> Poly
   mod !x !y = snd $ divModE x y
 
 
@@ -196,18 +208,16 @@ euclides_P :: Poly -> Poly -> (Poly, Poly, Poly)
 euclides_P !x !y = (Poly $ (i0 \*) <$> rs, Poly $ (i0 \*) <$> ss, Poly $ (i0 \*) <$> ts)
   where
     !i0 = inverse_I . head $ rs
-    !(Poly !rs, Poly !ss, Poly !ts) = go (x, one, zero) (y, zero, one)
-    go :: (Poly, Poly, Poly) -> (Poly, Poly, Poly) -> (Poly, Poly, Poly)
-    go (!r0, !s0, !t0) (!r1, !s1, !t1)
-      | r1 == zero = (r0, s0, t0)
+    ![Poly !rs, Poly !ss, Poly !ts] = go x one zero y zero one
+    go :: Poly -> Poly -> Poly -> Poly -> Poly -> Poly -> [Poly]
+    go !r0 !s0 !t0 !r1 !s1 !t1
+      | r1 === zero = [r0, s0, t0]
       | otherwise  = let
             !(!q, !r2) = divModE r0 r1
             !s2      = s0 - q * s1
             !t2      = t0 - q * t1
           in
-            go (r1, s1, t1) (r2, s2, t2)
-
-
+            go r1 s1 t1 r2 s2 t2
 instance Field Poly where
   mod0 !p  = Poly $ mod0 <$> ps
     where
@@ -240,6 +250,7 @@ inverse_P :: Poly -> Poly
 inverse_P !x = mod t p0
   where
     !p0 = Poly poly0
+    -- !(_, _, !t) = trace (appendString "Calling euclides p0 " $ appendString (polyToBultinString p0)  $ appendString " and x " (polyToBultinString x)) euclides_P p0 x
     !(_, _, !t) = euclides_P p0 x
 
 
@@ -284,6 +295,10 @@ instance Semigroup EllipticCurve_I where
 data EllipticCurve_P = ECP Poly Poly | InftyP
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON)
+
+showEllipticCurveP :: EllipticCurve_P -> BuiltinString
+showEllipticCurveP InftyP = "InftyP"
+showEllipticCurveP (ECP !x !y) = appendString (appendString "ECP " (polyToBultinString x)) (appendString " " (polyToBultinString y))
 
 unstableMakeIsData ''Poly
 unstableMakeIsData ''EllipticCurve_P
@@ -364,7 +379,7 @@ type G2 = EllipticCurve_P  -- elliptic curve over polynomials
 pairing :: G1 -> G2 -> Poly
 pairing !p1 !q2 = embed rSign \*\ f_P_Q \*\ inverse_P f_Q_P
   where
-    !f_P_Q   = miller' (embedEC p1) q2
+    !f_P_Q   = miller' (embedEC p1)  q2
     !f_Q_P   = miller' q2 (embedEC p1)
     !miller' = miller bitsR  -- 'bitsR' defined in module 'Params'
 
@@ -406,22 +421,22 @@ powInstance !p1s !ns = if length p1s == length ns + 1
 -----------------------------------------------------------------------
 
 data ZKProof = ZKProof
-  { g1A :: G1
-  , g2B :: G2
-  , g1C :: G1
+  { g1A :: !G1
+  , g2B :: !G2
+  , g1C :: !G1
   } deriving stock (Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
 unstableMakeIsData ''ZKProof
 
 data VerifyDatum = VerifyDatum
-  { g1Alpha :: G1
-  , g2Beta  :: G2
-  , g2Gamma :: G2
-  , g2Delta :: G2
-  , g1IC    :: [G1]
-  , public  :: PublicInst  -- public instance
-  , proof   :: ZKProof     -- zk proof
+  { g1Alpha :: !G1
+  , g2Beta  :: !G2
+  , g2Gamma :: !G2
+  , g2Delta :: !G2
+  , g1IC    :: ![G1]
+  , public  :: !PublicInst  -- public instance
+  , proof   :: !ZKProof     -- zk proof
   } deriving stock (Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -430,7 +445,7 @@ unstableMakeIsData ''VerifyDatum
 -- | Same as "mkVerificationValidator" below, but ommiting the
 -- 'ScriptContext' argument.  Used for testing in the REPL.
 mkVerificationValidator' :: VerifyDatum -> () -> Bool
-mkVerificationValidator' dat _ = traceIfFalse "REJECT" acceptQ
+mkVerificationValidator' dat _ = acceptQ
   where
     acceptQ :: Bool
     acceptQ = pairing g1A' g2B' == pairing g1Alpha' g2Beta' \*\ pairing g1I g2Gamma' \*\ pairing g1C' g2Delta'
@@ -448,6 +463,9 @@ mkVerificationValidator' dat _ = traceIfFalse "REJECT" acceptQ
     g2Delta' = g2Delta dat
 
 
+getPoly :: EllipticCurve_P -> Poly
+getPoly (ECP !_ !y) =  y
+getPoly InftyP      = Poly [0, 0]
 
 --------------------
 ----- PlutusTx -----
@@ -456,20 +474,20 @@ mkVerificationValidator :: VerifyDatum -> () -> PlutusV2.ScriptContext -> Bool
 mkVerificationValidator dat _ _ = traceIfFalse "REJECT" acceptQ
   where
     acceptQ :: Bool
-    acceptQ = pairing g1A' g2B' == pairing g1Alpha' g2Beta' \*\ pairing g1I g2Gamma' \*\ pairing g1C' g2Delta'
-    --acceptQ = pairing g1C' g2Delta' == Poly [1]
+    --acceptQ = pairing g1A' g2B' == pairing g1Alpha' g2Beta' \*\ pairing g1I g2Gamma' \*\ pairing g1C' g2Delta'
+    acceptQ = pairing g1Alpha' g2Beta' /= Poly [1]
 
-    g1I :: G1
-    g1I = powInstance (g1IC dat) (public dat)
+    -- g1I :: G1
+    -- g1I = powInstance (g1IC dat) (public dat)
 
-    g1A' = g1A $ proof dat
-    g2B' = g2B $ proof dat
-    g1C' = g1C $ proof dat
+    -- g1A' = g1A $ proof dat
+    -- g2B' = g2B $ proof dat
+    -- g1C' = g1C $ proof dat
 
-    g1Alpha' = g1Alpha dat
-    g2Beta'  = g2Beta dat
-    g2Gamma' = g2Gamma dat
-    g2Delta' = g2Delta dat
+    !g1Alpha' = g1Alpha dat
+    !g2Beta'  = trace (showEllipticCurveP $ g2Beta dat) g2Beta dat
+    -- g2Gamma' = g2Gamma dat
+    -- g2Delta' = g2Delta dat
 
 
 data TypedGroth
@@ -486,10 +504,3 @@ typedGrothValidator = V2.mkTypedValidator @TypedGroth
 
 grothValidator :: PlutusV2.Validator
 grothValidator = PlutusV2.validatorScript typedGrothValidator
-
-{-# INLINABLE plutusSum #-}
-plutusSum :: Integer -> Integer -> Integer
-plutusSum a b = a + b
-
-compiledSum :: PlutusTx.Code.CompiledCode (BuiltinData -> BuiltinData -> Integer)
-compiledSum = $$(PlutusTx.compile [|| \x y -> plutusSum (unsafeFromBuiltinData x) (unsafeFromBuiltinData y) ||])

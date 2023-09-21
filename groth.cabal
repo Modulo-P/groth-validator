@@ -23,7 +23,7 @@ category:       Blockchain
 flag defer-plugin-errors
     description:
         Defer errors from the plugin, useful for things like Haddock that can't handle it.
-    default: False
+    default: True
     manual: True
 
 common lang
@@ -56,12 +56,16 @@ library
         BLS6_6.Params,
         BLS6_6.ZKPVerification,
         BLS6_6.Test,
+        BLS6_6_V1.Params,
+        BLS6_6_V1.ZKPVerification,
+        BLS6_6_V1.Test,
         BN128.Params,
         BN128.ZKPVerification,
         BN128.Test,  
         BN128.ParseDatum, 
         Deploy, 
-        Auxiliary
+        Auxiliary,
+        PlutusUtils
 
     build-depends:
       base >= 4.9 && < 5,
@@ -79,6 +83,7 @@ library
       lens -any,
       cardano-api, 
       cardano-binary,
+      cardano-prelude,
       --additionals:
       serialise -any,
       --base16-bytestring,
@@ -109,6 +114,7 @@ test-suite groth-validator-test
         cardano-ledger-alonzo,
         cardano-ledger-core,
         cardano-api,
+        cardano-prelude,
 
         plutus-contract,
         cardano-node-emulator,

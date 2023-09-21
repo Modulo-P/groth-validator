@@ -21,6 +21,6 @@ uplc evaluate -i applied.flat --if flat-namedDeBruijn --trace-mode LogsWithBudge
 traceToStacks=/Users/juan.magan/ws/Modulo-P/plutus/plutus/dist-newstyle/build/x86_64-osx/ghc-9.2.8/plutus-core-1.10.0.0/x/traceToStacks/build/traceToStacks/traceToStacks
 
   # quitar unas lineas que dan error
-sed '/^decoded/d' logs > logs.new && mv logs.new logs 
+sed '/decoded/d' logs > logs.new && mv logs.new logs 
 
 cat logs | traceToStacks | flamegraph.pl > cpu.svg

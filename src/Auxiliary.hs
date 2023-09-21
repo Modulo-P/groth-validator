@@ -1,5 +1,6 @@
 module Auxiliary where
 
+
 ----- AUXILIARY FUNCTIONS -----
 
 -- | To binary representation [b_0, b_1, ..., b_(t-1)] of 'n', with b_t == 1
