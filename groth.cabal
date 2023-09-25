@@ -34,6 +34,7 @@ common lang
       -Wredundant-constraints -Widentities -rtsopts
       -- See Plutus Tx readme
       -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+      -fno-specialise
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
 
@@ -66,6 +67,17 @@ library
         Deploy, 
         Auxiliary,
         PlutusUtils
+        
+        -- Algebra
+        ,Algebra.V1.Integers
+        ,Algebra.V1.Polynomials
+        ,Algebra.V1.Types
+        ,Algebra.V1.Test
+
+        ,Algebra.V2.Integers
+        ,Algebra.V2.Polynomials
+        ,Algebra.V2.Types
+        ,Algebra.V2.Test
 
     build-depends:
       base >= 4.9 && < 5,
@@ -73,12 +85,16 @@ library
       bytestring -any,
       containers -any,
       freer-extras -any,
+      
+      template-haskell -any,
+      
       plutus-ledger -any,
       plutus-ledger-api -any,
       --plutus-ledger-constraints -any,
       plutus-tx -any,
       plutus-tx-plugin -any,
       plutus-script-utils -any,
+      plutus-core -any,
       text -any,
       lens -any,
       cardano-api, 
@@ -101,6 +117,7 @@ test-suite groth-validator-test
     hs-source-dirs:    test
     other-modules:
                         Spec.BLS6_6.ZKPValidator
+                        Spec.BLS6_6_V1.ZKPValidator
     build-depends:
         base,
         groth,
@@ -109,6 +126,39 @@ test-suite groth-validator-test
         containers,
         flat,
         bytestring,
+
+        cardano-ledger-babbage,
+        cardano-ledger-alonzo,
+        cardano-ledger-core,
+        cardano-api,
+        cardano-prelude,
+
+        plutus-contract,
+        cardano-node-emulator,
+        freer-extras,
+        aeson,
+        plutus-tx,
+        plutus-core,
+        plutus-ledger-api,
+        plutus-script-utils,
+        plutus-ledger,
+        plutus-tx-constraints
+
+executable groth-validator-cost-exe
+    import:            lang
+    type:              exitcode-stdio-1.0
+    main-is:           Main.hs
+    hs-source-dirs:    exe
+    other-modules:
+    build-depends:
+        base,
+        groth,
+        text,
+        data-default,
+        containers,
+        flat,
+        bytestring,
+        template-haskell -any,
 
         cardano-ledger-babbage,
         cardano-ledger-alonzo,

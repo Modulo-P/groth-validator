@@ -18,7 +18,7 @@ uplc evaluate -i applied.textual --if textual --trace-mode LogsWithBudgets -o lo
 uplc evaluate -i applied.flat --if flat-namedDeBruijn --trace-mode LogsWithBudgets -o logs
 
 # Profile graph
-traceToStacks=/Users/juan.magan/ws/Modulo-P/plutus/plutus/dist-newstyle/build/x86_64-osx/ghc-9.2.8/plutus-core-1.10.0.0/x/traceToStacks/build/traceToStacks/traceToStacks
+alias traceToStacks=/Users/juan.magan/ws/Modulo-P/plutus/plutus/dist-newstyle/build/x86_64-osx/ghc-9.2.8/plutus-core-1.10.0.0/x/traceToStacks/build/traceToStacks/traceToStacks
 
   # quitar unas lineas que dan error
 sed '/decoded/d' logs > logs.new && mv logs.new logs 

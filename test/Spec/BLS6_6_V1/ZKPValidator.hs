@@ -136,7 +136,7 @@ runLockTrace =
   Trace.runEmulatorTraceIO' def (def {_params = increaseLimits defaultParams}) lockTrace
 
 increaseLimits :: Params -> Params
-increaseLimits = increaseTransactionLimits' 1_000_000 1_000_000 1_000_000
+increaseLimits = increaseTransactionLimits' 1 1 1
 
 
 defaultParams :: Params

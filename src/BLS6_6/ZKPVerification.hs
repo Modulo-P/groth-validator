@@ -14,6 +14,7 @@
 {-# LANGUAGE DerivingStrategies         #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
+{-# LANGUAGE InstanceSigs               #-}
 {-# LANGUAGE StrictData                 #-}
 
 -- {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:profile-all #-}
@@ -27,7 +28,21 @@ module BLS6_6.ZKPVerification where
 import           PlutusTx                             (compile,
                                                        unstableMakeIsData)
 import           PlutusTx.Builtins                    (modInteger)
-import           PlutusTx.Prelude
+import           PlutusTx.Prelude                     (AdditiveGroup (..),
+                                                       AdditiveMonoid (..),
+                                                       AdditiveSemigroup (..),
+                                                       Bool (..), BuiltinData,
+                                                       Eq (..), Integer,
+                                                       MultiplicativeMonoid (..),
+                                                       MultiplicativeSemigroup (..),
+                                                       Ord ((<), (<=)), Ring,
+                                                       Semigroup (..), divMod,
+                                                       foldr, head, length,
+                                                       negate, not, otherwise,
+                                                       reverse, snd, sum, take,
+                                                       traceError, traceIfFalse,
+                                                       zipWith, (!!), ($), (&&),
+                                                       (.), (<$>), (||))
 import           Prelude                              (Show)
 
 import qualified Plutus.V2.Ledger.Api                 as PlutusV2
@@ -53,12 +68,15 @@ infixl 7 \*\
 
 -- Helper functions --
 
+{-# INLINABLE replicate #-}
 replicate :: Integer -> a -> [a]
 replicate !a !b = if a <= 0 then [] else b : replicate (a-1) b
 
+{-# INLINABLE last #-}
 last :: [a] -> a
 last !xs = xs !! (length xs - 1)
 
+{-# INLINABLE range #-}
 range :: Integer -> [Integer]
 range !n = go [n]
   where
@@ -82,8 +100,12 @@ class (Eq a, Ring a) => Field a where
 -- Integers --
 
 instance EuclideanRing Integer where
+  {-# INLINABLE divModE #-}
+  divModE :: Integer -> Integer -> (Integer, Integer)
   divModE !a !b = divMod a b
 
+  {-# INLINABLE mod #-}
+  mod :: Integer -> Integer -> Integer
   mod !a !b    = modInteger a b
 
 {-# INLINABLE euclides_I #-}
@@ -101,8 +123,12 @@ euclides_I !x !y = if r < 0 then (negate r, negate s, negate t) else (r, s, t)
              go (r1, s1, t1) (r2, s2, t2)
 
 instance Field Integer where
+  {-# INLINABLE mod0 #-}
+  mod0 :: Integer -> Integer
   mod0 !n = mod n q0
 
+  {-# INLINABLE (===) #-}
+  (===) :: Integer -> Integer -> Bool
   (===) !n !m = mod0 (n - m) == 0
 
 
@@ -130,24 +156,34 @@ newtype Poly = Poly [Integer]
   deriving anyclass (ToJSON, FromJSON)
 
 instance AdditiveSemigroup Poly where
+  {-# INLINABLE (+) #-}
   (+) (Poly !ps) (Poly !qs) = Poly $ zipWith (+) ps qs
 
 instance AdditiveMonoid Poly where
+  {-# INLINABLE zero #-}
+  zero :: Poly
   zero = Poly $ replicate (k0 + 1) 0
 
 instance AdditiveGroup Poly where
+  {-# INLINABLE (-) #-}
+  (-) :: Poly -> Poly -> Poly
   (-) (Poly !ps) (Poly !qs) = Poly $ zipWith (-) ps qs
 
 instance MultiplicativeSemigroup Poly where
+  {-# INLINABLE (*) #-}
+  (*) :: Poly -> Poly -> Poly
   (*) (Poly !ps) (Poly !qs) = Poly $ term ps qs <$> range (length ps)
     where
       term :: [Integer] -> [Integer] -> Integer -> Integer
       term !ps !qs !n = sum $ zipWith (*) (take n ps) (reverse $ take n qs)
 
 instance MultiplicativeMonoid Poly where
+  {-# INLINABLE one #-}
+  one :: Poly
   one = Poly $ [1] <> replicate k0 0
 
 -- | "fit" adjusts 'poly' to a list of length 'k0 + 1'
+{-# INLINABLE fit #-}
 fit :: Poly -> Poly
 fit (Poly !ps) = Poly $ ps <> replicate (k0 - length ps + 1) 0
 
@@ -167,6 +203,7 @@ degree (Poly !ps) = if mod0 (last ps) == 0
 -- polynomials
 instance EuclideanRing Poly where
   {-# INLINABLE divModE #-}
+  divModE :: Poly -> Poly -> (Poly, Poly)
   divModE n@(Poly !ns) !d = go (d, zero, n)
     where
       len = length ns
@@ -209,10 +246,13 @@ euclides_P !x !y = (Poly $ (i0 \*) <$> rs, Poly $ (i0 \*) <$> ss, Poly $ (i0 \*)
 
 
 instance Field Poly where
+  {-# INLINABLE mod0 #-}
+  mod0 :: Poly -> Poly
   mod0 !p  = Poly $ mod0 <$> ps
     where
       Poly !ps = mod p (Poly poly0)
-
+  {-# INLINABLE (===) #-}
+  (===) :: Poly -> Poly -> Bool
   (===) !p !q = mod (p - q) (Poly poly0) == zero
 
 
@@ -289,6 +329,7 @@ unstableMakeIsData ''Poly
 unstableMakeIsData ''EllipticCurve_P
 
 instance Eq EllipticCurve_P where
+  {-# INLINABLE (==) #-}
   (==) (ECP !x1 !y1) (ECP !x2 !y2) = mod0 (x2 - x1) == zero && mod0 (y2 - y1) == zero
   (==) (ECP _ _) InftyP        = False
   (==) InftyP (ECP _ _)        = False
@@ -296,6 +337,7 @@ instance Eq EllipticCurve_P where
 
 -- | Group multiplication on an elliptic curve over polynomials
 instance Semigroup EllipticCurve_P where
+  {-# INLINABLE (<>) #-}
   (<>) InftyP !p = p
   (<>) !p InftyP = p
   (<>) (ECP !x1 !y1) (ECP !x2 !y2)
@@ -318,12 +360,14 @@ instance Semigroup EllipticCurve_P where
 -- Pairing --
 
 -- | Miller's algorithm
+{-# INLINABLE miller #-}
 miller :: [Integer] -> EllipticCurve_P -> EllipticCurve_P -> Poly
 miller !bits !p !q
   | p == InftyP || q == InftyP || p == q = embed rSign
   | otherwise = millerGeneric bits p q
 
 -- | Miller's algorithm: generic case
+{-# INLINABLE millerGeneric #-}
 millerGeneric :: [Integer] -> EllipticCurve_P -> EllipticCurve_P -> Poly
 millerGeneric !bits (ECP !xP !yP) (ECP !xQ !yQ) = g1 \*\ inverse_P g2
   where
@@ -333,6 +377,7 @@ millerGeneric !bits (ECP !xP !yP) (ECP !xQ !yQ) = g1 \*\ inverse_P g2
     !bits'              = take (length bits - 1) bits
 
 -- | Accumulator function for Miller's algorithm
+{-# INLINABLE millerComb #-}
 millerComb :: EllipticCurve_P -> EllipticCurve_P                                  -- point parameters
               -> Integer -> (Poly, Poly, Poly, Poly) -> (Poly, Poly, Poly, Poly)  -- accumulator function
 millerComb (ECP !xP !yP) (ECP !xQ !yQ) !b (!f1, !f2, !x, !y) =
@@ -373,6 +418,7 @@ pairing !p1 !q2 = embed rSign \*\ f_P_Q \*\ inverse_P f_Q_P
 
 -- | Binary representation of a non-negative integer. Note that 'bits n' never
 -- has a '0' head.
+{-# INLINABLE bits #-}
 bits :: Integer -> [Integer]
 bits !n = go n []
   where
@@ -382,6 +428,7 @@ bits !n = go n []
           go q (r : bits)
 
 -- | Effiicient exponentiation on 'G1'
+{-# INLINABLE exp1 #-}
 exp1 :: G1 -> Integer -> G1
 exp1 InftyI _ = InftyI
 exp1 !p1 !n   = foldr (exp1Comb p1) InftyI (reverse $ bits n)

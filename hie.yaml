@@ -1,2 +1,13 @@
 cradle:
   cabal:
+    - path: "src"
+      component: "lib:groth"
+
+    - path: "test"
+      component: "groth:test:groth-validator-test"
+
+    - path: "exe/Main.hs"
+      component: "groth:exe:groth-validator-cost-exe"
+
+    - path: "utilities/src"
+      component: "lib:utilities"
