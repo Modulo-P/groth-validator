@@ -29,7 +29,7 @@ flag defer-plugin-errors
 common lang
     default-language:   Haskell2010
     ghc-options:
-      -Wall -Wnoncanonical-monad-instances
+      -Wnoncanonical-monad-instances
       -Wincomplete-uni-patterns -Wincomplete-record-updates
       -Wredundant-constraints -Widentities -rtsopts
       -- See Plutus Tx readme
@@ -78,6 +78,14 @@ library
         ,Algebra.V2.Polynomials
         ,Algebra.V2.Types
         ,Algebra.V2.Test
+
+        ,Algebra.V3.Integers
+        ,Algebra.V3.Polynomials
+        ,Algebra.V3.Types
+        ,Algebra.V3.Test
+
+        ,BLS12_381_V1.Pairing_bls12381
+        ,BLS12_381_V2.Pairing_bls12381
 
     build-depends:
       base >= 4.9 && < 5,

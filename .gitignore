@@ -5,3 +5,4 @@ BLS6_6.ZKPVerification.uplc*.flat
 logs
 
 .DS_Store
+compiled/.DS_Store

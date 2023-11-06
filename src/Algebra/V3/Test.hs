@@ -4,16 +4,15 @@
 
 -- {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:profile-all #-}
 
-module Algebra.V2.Test where
+module Algebra.V3.Test where
 
-import           Algebra.V2.Polynomials
+import           Algebra.V3.Polynomials
 
 import           PlutusCore             (DefaultUni)
 import           PlutusCore.Default     (DefaultFun)
 import           PlutusTx               as Tx
 import           PlutusTx.Prelude       ((*))
 import qualified UntypedPlutusCore      as UPLC
-
 
 
 poly01 :: Poly
@@ -28,6 +27,3 @@ runInversePTest = getPlc $$(Tx.compile [|| inverseP poly01 ||])
 
 runSumOfPolys :: UPLC.Program UPLC.NamedDeBruijn DefaultUni DefaultFun ()
 runSumOfPolys = getPlc $$(Tx.compile [|| poly01 * poly02 ||])
-
-
-

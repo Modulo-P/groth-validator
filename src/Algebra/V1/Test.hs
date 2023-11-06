@@ -2,7 +2,9 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:profile-all #-}
+
+-- {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:profile-all #-}
+
 
 module Algebra.V1.Test where
 
